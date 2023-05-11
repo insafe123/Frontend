@@ -1,23 +1,22 @@
-import logo from './logo.svg';
-import './App.css';
+import React, {useState} from 'react';
+
+
+import UploadComponent from "./components/upload";
+import VisualizeComponent from './components/visualize';
 
 function App() {
+  const [fileName, setFileName] = useState('');
+
+  const handleFileUpload = (file) => {
+    // Send the file to the backend and get the file name in response
+    // Then update the fileName state variable
+    setFileName('example.obj');
+  };
+
   return (
-    <div className="App">
-      <header className="App-header">
-        <img src={logo} className="App-logo" alt="logo" />
-        <p>
-          Edit <code>src/App.js</code> and save to reload.
-        </p>
-        <a
-          className="App-link"
-          href="https://reactjs.org"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          Learn React
-        </a>
-      </header>
+    <div>
+      <UploadComponent onFileUpload={handleFileUpload} />
+      <VisualizeComponent modelUrl={`/models/${fileName}`} />
     </div>
   );
 }
