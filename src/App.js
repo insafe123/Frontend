@@ -25,7 +25,7 @@ function App() {
     <div className="container">
       {/* ... */}
       <section className="visualizer">
-        <h2>Upload, Display, and Predict Models</h2>
+        {/*<h2>Upload, Display, and Predict Models</h2>*/}
         {!fileUploaded && (
           <input type="file" accept=".obj,.stl,.vtp" onChange={handleFileUpload} />
         )}

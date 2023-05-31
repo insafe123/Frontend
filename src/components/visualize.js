@@ -12,7 +12,7 @@ function ThreeScene() {
   const [uploading, setUploading] = useState(false);
   const [message, setMessage] = useState('');
   const [formData, setFormData] = useState(null);
-
+const [vtpFileUrl, setVtpFileUrl] = useState('');
   const handleFileUpload = (event) => {
     const file = event.target.files[0];
     setModel(null);
@@ -89,15 +89,15 @@ function ThreeScene() {
       const response = await axios.get('http://localhost:8000/vtp-file', {
         responseType: 'blob', // Set the response type to 'blob' to handle binary data
       });
-
+      const vtpFileBlob = new Blob([response.data]);
+      const vtpFileUrl = URL.createObjectURL(vtpFileBlob);
+      setVtpFileUrl(vtpFileUrl);
       // Create a URL object to generate a temporary download link
-      const url = URL.createObjectURL(new Blob([response.data]));
+      //const url = URL.createObjectURL(new Blob([response.data]));
 
-      // Use the temporary download link to display or download the VTP file in your React app
-      // Implement the appropriate logic to handle the VTP file based on your requirements
-      // For example, you can display the VTP file in a vtk.js component or provide a download link
 
-      console.log('VTP file URL:', url);
+
+      console.log('VTP file URL:', vtpFileUrl);
     } catch (error) {
       console.error('Error fetching VTP file:', error);
     }
@@ -141,6 +141,15 @@ function ThreeScene() {
     setDisplayModel(true);
   };
 
+ const handleDownload = () => {
+      if (vtpFileUrl) {
+        const link = document.createElement('a');
+        link.href = vtpFileUrl;
+        link.download = 'output.vtp';
+        link.click();
+      }
+    };
+
   return (
     <div>
       <form>
@@ -150,6 +159,9 @@ function ThreeScene() {
         </button>
         <button type="button" onClick={handlePredictModel} disabled={!model || uploading}>
           {uploading ? 'Predicting...' : 'Predict'}
+        </button>
+         <button type="button" onClick={handleDownload} disabled={!vtpFileUrl}>
+          Download Output.vtp
         </button>
       </form>
       {message && <div>{message}</div>}
@@ -167,3 +179,4 @@ function ThreeScene() {
 }
 
 export default ThreeScene;
+
