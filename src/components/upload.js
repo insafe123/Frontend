@@ -36,30 +36,7 @@ const handleSubmit = async (event) => {
 
 };
 
-  // const handleSubmit = async (event) => {
-  //   event.preventDefault();
-  //
-  //   const formData = new FormData();
-  //   formData.append('file', file);
-  //
-  //   setUploading(true);
-  //   setMessage('');
-  //
-  //   try {
-  //     const response = await axios.post('http://127.0.0.1:8000/upload', formData, {
-  //       headers: {
-  //         'Content-Type': 'multipart/form-data',
-  //       },
-  //     });
-  //     console.log('Model uploaded:', response.data.fileName);
-  //     setMessage(`Model uploaded`);
-  //   } catch (error) {
-  //     console.error('Error Predicting file:', error);
-  //     setMessage('Error Predicting file');
-  //   } finally {
-  //     setUploading(false);
-  //   }
-  // };
+
 
   return (
     <div>

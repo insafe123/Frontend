@@ -1,59 +1,169 @@
 import React, { useState } from 'react';
+import axios from 'axios';
 import * as THREE from 'three';
+import { OBJLoader } from 'three/examples/jsm/loaders/OBJLoader.js';
+import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader';
+import { STLLoader } from 'three/examples/jsm/loaders/STLLoader';
+import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 
-function VisualizeComponent(props) {
-  const [loaded, setLoaded] = useState(false);
+function ThreeScene() {
+  const [model, setModel] = useState(null);
+  const [displayModel, setDisplayModel] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [message, setMessage] = useState('');
+  const [formData, setFormData] = useState(null);
 
-  const sceneRef = React.useRef(null);
-  const containerRef = React.useRef(null);
+  const handleFileUpload = (event) => {
+    const file = event.target.files[0];
+    setModel(null);
+    setDisplayModel(false);
 
-  const loadModel = () => {
-    const loader = new THREE.ObjectLoader();
-    loader.load(
-      props.modelUrl,
-      (object) => {
-        // Add the loaded object to the scene
-        sceneRef.current.add(object);
+    const newFormData = new FormData();
+    newFormData.append('file', file);
+    setFormData(newFormData);
 
-        // Set the camera position and target
-        const box = new THREE.Box3().setFromObject(object);
-        const center = box.getCenter(new THREE.Vector3());
-        const size = box.getSize(new THREE.Vector3());
-        const distance = Math.max(size.x, size.y, size.z);
-        const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 1, 1000);
-        camera.position.set(center.x, center.y, distance * 2.5);
-        camera.lookAt(center);
+    if (file.name.endsWith('.obj')) {
+      const loader = new OBJLoader();
+      loader.load(
+        URL.createObjectURL(file),
+        (obj) => {
+          setModel(obj);
+        },
+        undefined,
+        (error) => {
+          console.error(error);
+        }
+      );
+    } else if (file.name.endsWith('.stl')) {
+      const loader = new STLLoader();
+      loader.load(
+        URL.createObjectURL(file),
+        (geometry) => {
+          const material = new THREE.MeshStandardMaterial({ color: 0xffffff });
+          const mesh = new THREE.Mesh(geometry, material);
+          setModel(mesh);
+        },
+        undefined,
+        (error) => {
+          console.error(error);
+        }
+      );
+    } else if (file.name.endsWith('.gltf') || file.name.endsWith('.glb')) {
+      const loader = new GLTFLoader();
+      loader.load(
+        URL.createObjectURL(file),
+        (gltf) => {
+          setModel(gltf.scene || gltf.scenes[0]);
+        },
+        undefined,
+        (error) => {
+          console.error(error);
+        }
+      );
+    } else {
+      console.error('Invalid file type');
+    }
+  };
 
-        // Set the renderer size and render the scene
-        const renderer = new THREE.WebGLRenderer({ antialias: true });
-        renderer.setSize(window.innerWidth, window.innerHeight);
-        renderer.render(sceneRef.current, camera);
 
-        // Add the renderer to the container
-        containerRef.current.appendChild(renderer.domElement);
+  const handlePredictModel = async () => {
+    setUploading(true);
 
-        setLoaded(true);
-      },
-      (xhr) => {
-        console.log(`${(xhr.loaded / xhr.total) * 100}% loaded`);
-      },
-      (error) => {
-        console.error('Error loading 3D model:', error);
-      }
+    try {
+      const response = await axios.post('http://localhost:8000/upload', formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      });
+
+      const predictions = response.data.predictions;
+
+      setMessage('Model predicted successfully');
+      console.log('Predictions:', predictions);
+    } catch (error) {
+      console.error('Error predicting model:', error);
+    }
+
+    try {
+      // Make a GET request to fetch the VTP file
+      const response = await axios.get('http://localhost:8000/vtp-file', {
+        responseType: 'blob', // Set the response type to 'blob' to handle binary data
+      });
+
+      // Create a URL object to generate a temporary download link
+      const url = URL.createObjectURL(new Blob([response.data]));
+
+      // Use the temporary download link to display or download the VTP file in your React app
+      // Implement the appropriate logic to handle the VTP file based on your requirements
+      // For example, you can display the VTP file in a vtk.js component or provide a download link
+
+      console.log('VTP file URL:', url);
+    } catch (error) {
+      console.error('Error fetching VTP file:', error);
+    }
+
+    setUploading(false);
+  };
+
+  const renderScene = (canvas) => {
+    const scene = new THREE.Scene();
+    const camera = new THREE.PerspectiveCamera(
+      75,
+      window.innerWidth / window.innerHeight,
+      0.1,
+      1000
     );
+    const renderer = new THREE.WebGLRenderer({ canvas });
+    renderer.setSize(window.innerWidth, window.innerHeight);
+
+    const controls = new OrbitControls(camera, renderer.domElement);
+    controls.target.set(0, 0, 0);
+    controls.update();
+
+    const light = new THREE.HemisphereLight(0xffffff, 0x000000, 1);
+    scene.add(light);
+    scene.background = new THREE.Color(0xffffff);
+
+    if (displayModel && model) {
+      scene.add(model);
+    }
+
+    camera.position.z = 5;
+
+    const animate = () => {
+      requestAnimationFrame(animate);
+      renderer.render(scene, camera);
+    };
+    animate();
+  };
+
+  const handleDisplayModel = () => {
+    setDisplayModel(true);
   };
 
   return (
     <div>
-      <button onClick={loadModel}>Visualize</button>
-      {loaded ? (
-        <div ref={containerRef}></div>
-      ) : (
-        <p>Click the button above to load and visualize the 3D model</p>
-      )}
-      <div ref={sceneRef}></div>
+      <form>
+        <input type="file" accept=".obj,.stl,.glb,.gltf" onChange={handleFileUpload} />
+        <button type="button" onClick={handleDisplayModel} disabled={!model}>
+          Display Model
+        </button>
+        <button type="button" onClick={handlePredictModel} disabled={!model || uploading}>
+          {uploading ? 'Predicting...' : 'Predict'}
+        </button>
+      </form>
+      {message && <div>{message}</div>}
+      <canvas
+        id="canvas"
+        ref={(canvas) => {
+          if (canvas) {
+            renderScene(canvas);
+          }
+        }}
+        style={{ width: '100%', height: '100%' }}
+      ></canvas>
     </div>
   );
 }
 
-export default VisualizeComponent;
+export default ThreeScene;
